@@ -31,6 +31,10 @@ The app runs on `http://localhost:8095`.
 npm run build
 ```
 
+## User guide
+
+- Italian guide: [GUIDA_UTENTE_IT.md](GUIDA_UTENTE_IT.md)
+
 ## Notes
 
 - The app does not add a new regression engine.
