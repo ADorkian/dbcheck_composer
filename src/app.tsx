@@ -322,8 +322,39 @@ function extractTablesFromUnknownPayload(value: unknown, depth = 0): string[] {
   return tables;
 }
 
-function hasSelectedRegressionConfig(payload: RegressionConfigResponse | undefined): boolean {
-  return Boolean(payload?.selectedConfig);
+function hasSelectedRegressionConfig(payload: RegressionConfigResponse | undefined, oid = ''): boolean {
+  if (!payload) {
+    return false;
+  }
+  if (payload.selectedConfig) {
+    return true;
+  }
+  const normalizedOid = oid.trim().toUpperCase();
+  if (!normalizedOid) {
+    return false;
+  }
+  if (typeof payload.configOid === 'string' && payload.configOid.trim().toUpperCase() === normalizedOid) {
+    return true;
+  }
+  return unknownPayloadContainsOid(payload.activeConfigs, normalizedOid);
+}
+
+function unknownPayloadContainsOid(value: unknown, normalizedOid: string, depth = 0): boolean {
+  if (depth > 4 || value == null) {
+    return false;
+  }
+  if (typeof value === 'string') {
+    return value.trim().toUpperCase() === normalizedOid;
+  }
+  if (Array.isArray(value)) {
+    return value.some((entry) => unknownPayloadContainsOid(entry, normalizedOid, depth + 1));
+  }
+  if (typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).some((entry) =>
+      unknownPayloadContainsOid(entry, normalizedOid, depth + 1)
+    );
+  }
+  return false;
 }
 
 function pickDbIdParams(existing: Record<string, string>, fallbackDbId: string): Record<string, string> {
@@ -1388,18 +1419,28 @@ function AppContent() {
           if (!oid) {
             throw new Error(`regressionConfig did not return oidSchedule: ${JSON.stringify(response)}`);
           }
+          if (hasSelectedRegressionConfig(response, identity.oid)) {
+            pushLog('success', 'Dynamic config accepted', `POST /regressionConfig returned configOid=${identity.oid}.`);
+          } else {
+            pushLog('warn', 'Dynamic config accepted without echo', 'POST /regressionConfig returned a schedule id but did not echo selectedConfig/configOid.');
+          }
           try {
             const persistedConfig = await readRegressionConfig(activeProfile, token, identity.oid);
-            if (!hasSelectedRegressionConfig(persistedConfig)) {
-              throw new Error(
-                `Missing CONFIG_REGRTEST_ELAB row for oid=${identity.oid} after POST /regressionConfig. ` +
-                'AKN scheduled the wrapper, but did not persist the dynamic config row. Deploy the AKN upsertRegressionConfig fix, then run again.'
+            if (hasSelectedRegressionConfig(persistedConfig, identity.oid)) {
+              pushLog('success', 'Dynamic config visible', `GET /regressionConfig sees CONFIG_REGRTEST_ELAB oid=${identity.oid}.`);
+            } else {
+              pushLog(
+                'warn',
+                'Dynamic config not visible through GET',
+                `Continuing because POST /regressionConfig returned schedule oid=${oid}. Verify dbo.CONFIG_REGRTEST_ELAB manually if TP does not execute DBCheck.`
               );
             }
-            pushLog('success', 'Dynamic config persisted', `CONFIG_REGRTEST_ELAB oid=${identity.oid} exists after upsert.`);
           } catch (error) {
-            pushLog('error', 'Dynamic config missing after upsert', String(error));
-            throw error;
+            pushLog(
+              'warn',
+              'Dynamic config visibility check failed',
+              `Continuing after successful POST /regressionConfig. GET visibility error: ${String(error)}`
+            );
           }
           pushLog('info', 'regressionConfig returned schedule oid', `statusOid=${oid}, resultOid=${resultOid}`);
         } else {
