@@ -1394,6 +1394,7 @@ function AppContent() {
       if (effectiveMode === 'scheduled') {
         let oid = '';
         let resultOid = '';
+        let directConfigNameFile = '';
         if (shouldUseDynamicFlow) {
           const identity = buildDynamicIdentity(effectiveDbCheckConfig);
           resultOid = identity.oid;
@@ -1408,7 +1409,8 @@ function AppContent() {
             TASK: identity.task,
             oid: identity.oid,
             OID: identity.oid,
-            oidScheduler: identity.oid
+            oidScheduler: identity.oid,
+            'regression.executionMode': 'directConfig'
           };
           pushLog(
             'info',
@@ -1416,9 +1418,10 @@ function AppContent() {
             `task=${dynamicPayloadWithIdentity.task ?? '-'}, oid=${dynamicPayloadWithIdentity.oid ?? '-'}, e.codElab=${dynamicPayloadWithIdentity['e.codElab'] ?? '-'}, keys=${Object.keys(dynamicPayloadWithIdentity).length}`
           );
           const response = await upsertRegressionConfig(activeProfile, token, dynamicPayloadWithIdentity, identity.oid);
-          oid = response.oidSchedule?.trim() ?? '';
+          directConfigNameFile = response.executionMode === 'directConfig' ? response.nameFile?.trim() ?? '' : '';
+          oid = directConfigNameFile || response.oidSchedule?.trim() || '';
           if (!oid) {
-            throw new Error(`regressionConfig did not return oidSchedule: ${JSON.stringify(response)}`);
+            throw new Error(`regressionConfig did not return oidSchedule or nameFile: ${JSON.stringify(response)}`);
           }
           if (hasSelectedRegressionConfig(response, identity.oid)) {
             pushLog('success', 'Dynamic config accepted', `POST /regressionConfig returned configOid=${identity.oid}.`);
@@ -1443,7 +1446,11 @@ function AppContent() {
               `Continuing after successful POST /regressionConfig. GET visibility error: ${String(error)}`
             );
           }
-          pushLog('info', 'regressionConfig returned schedule oid', `statusOid=${oid}, resultOid=${resultOid}`);
+          pushLog(
+            'info',
+            'regressionConfig accepted run',
+            directConfigNameFile ? `directConfig nameFile=${directConfigNameFile}, resultOid=${resultOid}` : `statusOid=${oid}, resultOid=${resultOid}`
+          );
         } else {
           oid = await runScheduled(activeProfile, token);
           resultOid = oid;
@@ -1451,8 +1458,10 @@ function AppContent() {
         }
         let status = '';
         while (!cancelRunRef.current) {
-          status = await pollStatus(activeProfile, token, oid);
-          pushLog('info', 'statusSched', status);
+          status = directConfigNameFile
+            ? await verifyRun(activeProfile, token, directConfigNameFile)
+            : await pollStatus(activeProfile, token, oid);
+          pushLog('info', directConfigNameFile ? 'verifyRT' : 'statusSched', status);
           if (!isPendingStatus(status)) break;
           await new Promise((resolve) => setTimeout(resolve, 10000));
         }

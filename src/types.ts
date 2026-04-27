@@ -73,6 +73,8 @@ export interface RunRecord {
 export interface RegressionConfigResponse {
   oidSchedule?: string;
   configOid?: string;
+  executionMode?: string;
+  nameFile?: string;
   elabParams?: Record<string, unknown>;
   scheduleEnvelope?: Record<string, unknown>;
   template?: Record<string, unknown>;
