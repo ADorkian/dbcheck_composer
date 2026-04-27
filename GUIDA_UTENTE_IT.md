@@ -89,6 +89,9 @@ Esempio:
 C:\sviluppo\devgit\regression-test\scriptSql\ic_01\DONE\CAL_PREMI_STEP_FORMULA_TP_8668_001.sql
 ```
 
+```text
+da https://akn-gitlab.akeron.com/devops/regressiontest/-/blob/master/scriptSql/ic_01/DONE/CAL_PREMI_STEP_FORMULA_TP_8668_001.sql?ref_type=heads
+```
 Il template import serve per casi come `CALCOLO_PREMI`, dove esistono gia script SQL con:
 
 - insert in `CONFIG_REGRTEST_ELAB`;
