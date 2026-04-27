@@ -1378,6 +1378,7 @@ function AppContent() {
       pushLog('warn', 'Run mode adjusted', 'Dynamic DBCheck requires scheduled mode. Switching from direct to scheduled.');
     }
     cancelRunRef.current = false;
+    clearRunResult();
     setRunning(true);
     pushLog('info', 'Run start', `${effectiveMode} flow against ${activeProfile.db}`);
 
@@ -1477,6 +1478,13 @@ function AppContent() {
             );
             structuredStatus = structuredResult.finalOutcome;
             pushLog('success', 'regressionResult resolved', `dataEsecuzione=${execDate}`);
+            if (shouldUseDynamicFlow && structuredResult.dbCheckOutcome == null) {
+              pushLog(
+                'warn',
+                'DBCheck snapshot missing',
+                `Result resolved for ${resultOid || oid}, but dbCheckOutcome is null. TP did not persist a DBCheck snapshot for this OID/date.`
+              );
+            }
             break;
           } catch (error) {
             const detail = `dataEsecuzione=${execDate} -> ${String(error)}`;
@@ -1538,6 +1546,13 @@ function AppContent() {
     setState((current) => ({
       ...current,
       resultHistory: [{ id: uid('run'), at: new Date().toISOString(), mode, phase, status, raw }, ...current.resultHistory]
+    }));
+  }
+
+  function clearRunResult() {
+    setState((current) => ({
+      ...current,
+      resultHistory: []
     }));
   }
 
@@ -2303,11 +2318,12 @@ function DynamicDbCheckTables({ config, params, missing }: { config: DbCheckConf
 }
 
 function RunResult({ lastRun, running, logs }: { lastRun: WorkspaceState['resultHistory'][number] | undefined; running: boolean; logs: LogEntry[] }) {
+  const resultText = lastRun ? lastRun.raw : running ? 'Run started. Waiting for schedule/result...' : 'No result yet.';
   return (
     <div className="run-grid">
       <div className="result-panel">
         <span className={`state-pill ${running ? 'loading' : lastRun ? 'success' : 'idle'}`}>{running ? 'Running' : lastRun ? lastRun.status : 'Idle'}</span>
-        <pre>{lastRun ? lastRun.raw : 'No result yet.'}</pre>
+        <pre>{resultText}</pre>
       </div>
       <div className="activity-panel">
         {logs.slice(0, 8).map((log) => (
