@@ -1365,20 +1365,6 @@ function AppContent() {
         if (shouldUseDynamicFlow) {
           const identity = buildDynamicIdentity(effectiveDbCheckConfig);
           resultOid = identity.oid;
-          try {
-            const existingConfig = await readRegressionConfig(activeProfile, token, identity.oid);
-            if (!hasSelectedRegressionConfig(existingConfig)) {
-              throw new Error(
-                `Missing CONFIG_REGRTEST_ELAB row for oid=${identity.oid}. ` +
-                'The current regressionConfig API schedules the wrapper but the runner cannot execute Dynamic DBCheck without a persisted config row. ' +
-                'Create/persist the config first, then run again.'
-              );
-            }
-            pushLog('success', 'Dynamic config found', `CONFIG_REGRTEST_ELAB oid=${identity.oid} exists.`);
-          } catch (error) {
-            pushLog('error', 'Dynamic config missing', String(error));
-            throw error;
-          }
           const dynamicPayload = buildDynamicLaunchParams(
             activeDraft?.launchParams ?? {},
             effectiveDbCheckConfig,
@@ -1401,6 +1387,19 @@ function AppContent() {
           oid = response.oidSchedule?.trim() ?? '';
           if (!oid) {
             throw new Error(`regressionConfig did not return oidSchedule: ${JSON.stringify(response)}`);
+          }
+          try {
+            const persistedConfig = await readRegressionConfig(activeProfile, token, identity.oid);
+            if (!hasSelectedRegressionConfig(persistedConfig)) {
+              throw new Error(
+                `Missing CONFIG_REGRTEST_ELAB row for oid=${identity.oid} after POST /regressionConfig. ` +
+                'AKN scheduled the wrapper, but did not persist the dynamic config row. Deploy the AKN upsertRegressionConfig fix, then run again.'
+              );
+            }
+            pushLog('success', 'Dynamic config persisted', `CONFIG_REGRTEST_ELAB oid=${identity.oid} exists after upsert.`);
+          } catch (error) {
+            pushLog('error', 'Dynamic config missing after upsert', String(error));
+            throw error;
           }
           pushLog('info', 'regressionConfig returned schedule oid', `statusOid=${oid}, resultOid=${resultOid}`);
         } else {
