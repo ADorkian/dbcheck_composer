@@ -15,10 +15,10 @@ export function createScorecardDbCheckSample(): DbCheckConfig {
   return {
     taskCode: 'REGR_TEST',
     codElab: 'SCORECARD_DBCHECK',
-    catalogResources: 'generated-applicativo/scorecard.yaml, generated-applicativo/payee.yaml',
+    catalogResources: 'generated-applicativo/beneficiari.yaml, generated-applicativo/misure-dati-kpi-qnt.yaml',
     regressionResource: 'scorecard/scorecard-regression.yaml',
-    runtimeText: 'contractId=CONTRACT_1\npayeeIds=PAYEE_1,PAYEE_2',
-    expectedText: 'expectedRows=2\nexpectedAmount=12.50'
+    runtimeText: 'payeeId=12034\ncodMisura=KPI_SALES_Q1\nexecutionId=SC_2026_04_27_01',
+    expectedText: 'expectedRows=1\nexpectedValue=87.50\nexpectedTolerance=0.01'
   };
 }
 

@@ -124,12 +124,14 @@ Esempio:
 
 ```properties
 e.codElab=SCORECARD_DBCHECK
-dbcheck.catalogResources=generated-applicativo/scorecard.yaml, generated-applicativo/payee.yaml
+dbcheck.catalogResources=generated-applicativo/beneficiari.yaml, generated-applicativo/misure-dati-kpi-qnt.yaml
 dbcheck.regressionResource=scorecard/scorecard-regression.yaml
-dbcheck.runtime.contractId=CONTRACT_1
-dbcheck.runtime.payeeIds=PAYEE_1,PAYEE_2
-dbcheck.expected.expectedRows=2
-dbcheck.expected.expectedAmount=12.50
+dbcheck.runtime.payeeId=12034
+dbcheck.runtime.codMisura=KPI_SALES_Q1
+dbcheck.runtime.executionId=SC_2026_04_27_01
+dbcheck.expected.expectedRows=1
+dbcheck.expected.expectedValue=87.50
+dbcheck.expected.expectedTolerance=0.01
 ```
 
 Se i file YAML non esistono ancora nel backend, la validazione resta rossa. In quel caso il tester puo comunque generare un prompt BE da consegnare a uno sviluppatore.
@@ -263,7 +265,7 @@ WHERE OID = 'SCORECARD_DBCHECK';
 
 ## Caso pratico: Scorecard DBCheck
 
-Obiettivo: verificare che il punteggio calcolato per uno o piu payee in un incentive plan non regredisca.
+Obiettivo: verificare che il valore calcolato per una KPI quantitativa di Scorecard non regredisca.
 
 Passi:
 
@@ -273,7 +275,7 @@ Passi:
 4. Inserire cataloghi:
 
 ```text
-generated-applicativo/scorecard.yaml, generated-applicativo/payee.yaml
+generated-applicativo/beneficiari.yaml, generated-applicativo/misure-dati-kpi-qnt.yaml
 ```
 
 5. Inserire regression resource:
@@ -285,23 +287,25 @@ scorecard/scorecard-regression.yaml
 6. Inserire parametri runtime, per esempio:
 
 ```properties
-dbcheck.runtime.contractId=CONTRACT_1
-dbcheck.runtime.payeeIds=PAYEE_1,PAYEE_2
+dbcheck.runtime.payeeId=12034
+dbcheck.runtime.codMisura=KPI_SALES_Q1
+dbcheck.runtime.executionId=SC_2026_04_27_01
 ```
 
 7. Inserire valori attesi:
 
 ```properties
-dbcheck.expected.expectedRows=2
-dbcheck.expected.expectedAmount=12.50
+dbcheck.expected.expectedRows=1
+dbcheck.expected.expectedValue=87.50
+dbcheck.expected.expectedTolerance=0.01
 ```
 
 8. Se validazione e verde, lanciare `Start schedule`.
 9. Se validazione e rossa per YAML mancanti, generare il prompt BE.
 
-## Esempio completo: Scorecard DBCheck
+## Esempio completo: TP-8912 Scorecard DBCheck
 
-Questo esempio mostra cosa inserire in DbCheck Composer per creare un caso Scorecard dinamico.
+Questo esempio mostra cosa inserire in DbCheck Composer per creare il primo caso Scorecard dinamico collegato a `TP-8912`.
 
 > Nota: i valori sotto sono realistici come struttura, ma gli identificativi devono essere sostituiti con valori presenti nel database di test.
 
@@ -309,22 +313,21 @@ Questo esempio mostra cosa inserire in DbCheck Composer per creare un caso Score
 
 Obiettivo funzionale:
 
-- elaborare una scorecard per un incentive plan;
-- verificare che due payee abbiano righe risultato coerenti;
-- verificare che il totale score/amount atteso non cambi dopo modifiche applicative.
+- calcolare una Scorecard con KPI quantitativa;
+- verificare il valore registrato in `MISURE_DATI_KPI_QNT`;
+- controllare che target/consuntivo non regrediscano dopo modifiche applicative.
 
 Valori esempio:
 
 ```text
 dbId: TP_ORACOLI_SVILUPPO
 OID/TASK: SCORECARD_DBCHECK
-contractId: 2C9280849D201C24019D2025233720AD
-incentivePlanId: PLAN_SCORECARD_2026
-periodId: 2026_03
-payeeIds: PAYEE_MARIO_ROSSI,PAYEE_LUCA_BIANCHI
-expectedRows: 2
-expectedTotalScore: 184.50
-expectedAverageScore: 92.25
+payeeId: 12034
+codMisura: KPI_SALES_Q1
+executionId: SC_2026_04_27_01
+expectedRows: 1
+expectedValue: 87.50
+expectedTolerance: 0.01
 ```
 
 ### Campi da inserire in Template step
@@ -338,7 +341,7 @@ Dynamic DBCheck
 Generic config:
 
 ```text
-Draft name: Scorecard Payee March 2026
+Draft name: TP-8912 Scorecard KPI QNT
 OID: SCORECARD_DBCHECK
 TASK: SCORECARD_DBCHECK
 Run mode: Start schedule
@@ -348,15 +351,14 @@ Dynamic DBCheck config:
 
 ```properties
 e.codElab=SCORECARD_DBCHECK
-dbcheck.catalogResources=generated-applicativo/scorecard.yaml, generated-applicativo/payee.yaml, generated-applicativo/incentive-plan.yaml
-dbcheck.regressionResource=scorecard/scorecard-payee-regression.yaml
-dbcheck.runtime.contractId=2C9280849D201C24019D2025233720AD
-dbcheck.runtime.incentivePlanId=PLAN_SCORECARD_2026
-dbcheck.runtime.periodId=2026_03
-dbcheck.runtime.payeeIds=PAYEE_MARIO_ROSSI,PAYEE_LUCA_BIANCHI
-dbcheck.expected.expectedRows=2
-dbcheck.expected.expectedTotalScore=184.50
-dbcheck.expected.expectedAverageScore=92.25
+dbcheck.catalogResources=generated-applicativo/beneficiari.yaml, generated-applicativo/misure-dati-kpi-qnt.yaml
+dbcheck.regressionResource=scorecard/scorecard-regression.yaml
+dbcheck.runtime.payeeId=12034
+dbcheck.runtime.codMisura=KPI_SALES_Q1
+dbcheck.runtime.executionId=SC_2026_04_27_01
+dbcheck.expected.expectedRows=1
+dbcheck.expected.expectedValue=87.50
+dbcheck.expected.expectedTolerance=0.01
 ```
 
 ### Cosa deve salvare AKN in CONFIG_REGRTEST_ELAB
@@ -392,111 +394,80 @@ oidScheduler=SCORECARD_DBCHECK
 
 Questo e corretto: `REGR_TEST` parte come contenitore, poi TP legge `CONFIG_REGRTEST_ELAB` e instrada al task dinamico.
 
-### Catalog YAML atteso: scorecard.yaml
+### Catalog YAML TP-8912: beneficiari.yaml
 
-Se il catalogo non esiste, il tester genera il prompt BE. Lo sviluppatore dovra creare una risorsa simile:
+Risorsa TP:
 
 ```yaml
-resource: generated-applicativo/scorecard.yaml
-tables:
-  scorecard_result:
-    table: SCORECARD_RESULT
-    primaryKey:
-      - OID_SCORECARD_RESULT
-    columns:
-      payeeId: OID_PAYEE
-      contractId: OID_CONTRATTO
-      incentivePlanId: OID_INCENTIVE_PLAN
-      periodId: COD_PERIODO
-      score: SCORE_VALUE
-      amount: RESULT_AMOUNT
-      status: STATUS
+datasets:
+  beneficiari:
+    source:
+      type: table
+      name: BENEFICIARI
+    fields:
+      id:
+        column: ID
+        type: integer
+        operators: [eq, neq, gt, gte, lt, lte, in, isNull, isNotNull]
 ```
 
-Adattare nomi tabella/colonne a quelli reali del DB TP.
+### Catalog YAML TP-8912: misure-dati-kpi-qnt.yaml
 
-### Catalog YAML atteso: payee.yaml
-
-```yaml
-resource: generated-applicativo/payee.yaml
-tables:
-  payee:
-    table: PAYEE
-    primaryKey:
-      - OID_PAYEE
-    columns:
-      payeeId: OID_PAYEE
-      code: COD_PAYEE
-      description: DESC_PAYEE
-      active: FLAG_ACTIVE
-```
-
-### Catalog YAML atteso: incentive-plan.yaml
+Risorsa TP:
 
 ```yaml
-resource: generated-applicativo/incentive-plan.yaml
-tables:
-  incentive_plan:
-    table: INCENTIVE_PLAN
-    primaryKey:
-      - OID_INCENTIVE_PLAN
-    columns:
-      incentivePlanId: OID_INCENTIVE_PLAN
-      code: COD_INCENTIVE_PLAN
-      description: DESC_INCENTIVE_PLAN
-      status: STATUS
-```
-
-### Regression YAML atteso
-
-Esempio concettuale:
-
-```yaml
-resource: scorecard/scorecard-payee-regression.yaml
-description: Verify scorecard result for selected payees
-catalogResources:
-  - generated-applicativo/scorecard.yaml
-  - generated-applicativo/payee.yaml
-  - generated-applicativo/incentive-plan.yaml
-runtime:
-  contractId: ${dbcheck.runtime.contractId}
-  incentivePlanId: ${dbcheck.runtime.incentivePlanId}
-  periodId: ${dbcheck.runtime.periodId}
-  payeeIds: ${dbcheck.runtime.payeeIds}
-expected:
-  expectedRows: ${dbcheck.expected.expectedRows}
-  expectedTotalScore: ${dbcheck.expected.expectedTotalScore}
-  expectedAverageScore: ${dbcheck.expected.expectedAverageScore}
-checks:
-  - name: scorecard_rows_for_payees
-    from: scorecard_result
-    where:
-      contractId: ${runtime.contractId}
-      incentivePlanId: ${runtime.incentivePlanId}
-      periodId: ${runtime.periodId}
+datasets:
+  misure_dati_kpi_qnt:
+    source:
+      type: table
+      name: MISURE_DATI_KPI_QNT
+    fields:
       payeeId:
-        in: ${runtime.payeeIds}
-    assert:
-      rowCount: ${expected.expectedRows}
-  - name: scorecard_total_score
-    from: scorecard_result
-    where:
-      contractId: ${runtime.contractId}
-      incentivePlanId: ${runtime.incentivePlanId}
-      periodId: ${runtime.periodId}
-      payeeId:
-        in: ${runtime.payeeIds}
-    aggregate:
-      totalScore:
-        sum: score
-      averageScore:
-        avg: score
-    assert:
-      totalScore: ${expected.expectedTotalScore}
-      averageScore: ${expected.expectedAverageScore}
+        column: COD_ATTRIBUTO1
+        type: integer
+        operators: [eq, neq, gt, gte, lt, lte, in, isNull, isNotNull]
+      codMisura:
+        column: OID_MISURA
+        type: string
+        operators: [eq, neq, in, isNull, isNotNull]
+      executionId:
+        column: OID_BOOK_STEP
+        type: string
+        operators: [eq, neq, in, isNull, isNotNull]
+      valore:
+        column: VALORE
+        type: decimal
+        operators: [eq, neq, gt, gte, lt, lte, isNull, isNotNull]
 ```
 
-La sintassi precisa deve seguire il DSL DBCheck implementato in TP. Usare questo blocco come specifica funzionale per il prompt BE se il DSL reale richiede nomi diversi.
+### Regression YAML TP-8912
+
+Risorsa TP:
+
+```yaml
+dbChecks:
+  - name: scorecard_non_regression_count
+    dataset: misure_dati_kpi_qnt
+    filter:
+      eq:
+        payeeId: ${payeeId}
+        codMisura: ${codMisura}
+        executionId: ${executionId}
+    assert:
+      count: ${expectedRows}
+  - name: scorecard_non_regression_values
+    dataset: misure_dati_kpi_qnt
+    filter:
+      eq:
+        payeeId: ${payeeId}
+        codMisura: ${codMisura}
+        executionId: ${executionId}
+    assert:
+      firstRowEquals:
+        valore: ${expectedValue}
+```
+
+Nota: `expectedTolerance` e disponibile come parametro runtime/expected per evoluzioni del DSL, ma il YAML attuale confronta `valore` con `expectedValue`.
 
 ### Prompt BE da generare se YAML mancanti
 
@@ -505,29 +476,25 @@ Se la validazione resta rossa per catalogo o regression resource mancante, gener
 ```text
 Implementare DBCheck dinamico SCORECARD_DBCHECK in TP.
 
-Contratto: 2C9280849D201C24019D2025233720AD
-Incentive plan: PLAN_SCORECARD_2026
-Periodo: 2026_03
-Payee: PAYEE_MARIO_ROSSI, PAYEE_LUCA_BIANCHI
+Jira: TP-8912
+Scenario: Scorecard KPI quantitativa, controllo valore target/consuntivo in MISURE_DATI_KPI_QNT.
 
 Catalog resources richieste:
-- generated-applicativo/scorecard.yaml
-- generated-applicativo/payee.yaml
-- generated-applicativo/incentive-plan.yaml
+- generated-applicativo/beneficiari.yaml
+- generated-applicativo/misure-dati-kpi-qnt.yaml
 
 Regression resource:
-- scorecard/scorecard-payee-regression.yaml
+- scorecard/scorecard-regression.yaml
 
 Runtime:
-- contractId
-- incentivePlanId
-- periodId
-- payeeIds
+- payeeId
+- codMisura
+- executionId
 
 Expected:
-- expectedRows = 2
-- expectedTotalScore = 184.50
-- expectedAverageScore = 92.25
+- expectedRows = 1
+- expectedValue = 87.50
+- expectedTolerance = 0.01
 
 Il test deve essere eseguito senza creare una nuova recipe Java hardcoded.
 Deve usare ConfiguredDynamicDbCheckRecipe e RTDbCheckDynamicTask.

@@ -1084,7 +1084,7 @@ function AppContent() {
   function applyScorecardSample() {
     const sample = createScorecardDbCheckSample();
     setTemplateTab('dynamic');
-    updateDraft({ name: 'SCORECARD_DBCHECK dynamic DBCheck', dbCheckConfig: sample });
+    updateDraft({ name: 'TP-8912 SCORECARD_DBCHECK', dbCheckConfig: sample });
     applyDbCheckConfig(sample);
   }
 
@@ -1896,7 +1896,7 @@ function AppContent() {
                 </Field>
                 <Field label="dbcheck.catalogResources">
                   <input
-                    placeholder="generated-applicativo/scorecard.yaml, generated-applicativo/payee.yaml"
+                    placeholder="generated-applicativo/beneficiari.yaml, generated-applicativo/misure-dati-kpi-qnt.yaml"
                     value={dbCheckConfig.catalogResources}
                     onChange={(event) => updateDbCheckConfig({ catalogResources: event.target.value })}
                   />
@@ -1961,7 +1961,7 @@ function AppContent() {
                 <Field label="dbcheck.runtime.*">
                   <textarea
                     rows={5}
-                    placeholder={'contractId=CONTRACT_1\npayeeIds=PAYEE_1,PAYEE_2'}
+                    placeholder={'payeeId=12034\ncodMisura=KPI_SALES_Q1\nexecutionId=SC_2026_04_27_01'}
                     value={dbCheckConfig.runtimeText}
                     onChange={(event) => updateDbCheckConfig({ runtimeText: event.target.value })}
                   />
@@ -1970,7 +1970,7 @@ function AppContent() {
                 <Field label="dbcheck.expected.*">
                   <textarea
                     rows={5}
-                    placeholder={'expectedRows=2\nexpectedAmount=12.50'}
+                    placeholder={'expectedRows=1\nexpectedValue=87.50\nexpectedTolerance=0.01'}
                     value={dbCheckConfig.expectedText}
                     onChange={(event) => updateDbCheckConfig({ expectedText: event.target.value })}
                   />
@@ -2013,7 +2013,7 @@ function AppContent() {
                   )}
                 </div>
               <div className="tab-actions dynamic-actions">
-                <button className="secondary" onClick={applyScorecardSample} type="button"><Clipboard size={16} /> SCORECARD sample</button>
+                <button className="secondary" onClick={applyScorecardSample} type="button"><Clipboard size={16} /> TP-8912 sample</button>
                 <button className="secondary" onClick={() => loadRegressionResources(true)} disabled={regressionLoading} type="button">
                   {regressionLoading ? <Loader2 className="spin" size={16} /> : <Download size={16} />}
                   Load regression YAML
